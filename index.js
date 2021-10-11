@@ -23,10 +23,16 @@ function eventsTtlFilter (context, config, eventEmitter, data, callback) {
   if (data === undefined) {
     return callback(new Error('data is null'), null)
   }
+  let keys = config.keys || ['message']
   try {
       if ( data && data.message ) {
-      let msg = data.message;
-      let shortie = ShortHash.unique(msg);
+      let msg = ''
+      keys.map( key => {
+      if ( data[key] ) {
+      msg = msg + ( msg == '' ? '' : ':') + data[key];
+      }
+      })
+      let shortie = ShortHash.unique(msg)
       if (ttlExpired(shortie, ttl, debug, msg)) {
       data.hash = shortie
       return callback(null, data)
