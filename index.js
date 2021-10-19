@@ -5,16 +5,16 @@ const ttlCache = new NodeCache({
     checkperiod: 60
 });
 
-function ttlExpired(shortie, ttl, debug, msg) {
+function ttlExpired(shortie, ttl, debug, msg, data) {
     let remaining = ttlCache.getTtl(shortie)
     if (remaining && remaining > 0) {
         if (debug) {
-            console.log('dropped', msg, parseInt((remaining - Date.now()) / 1000))
+            console.log('TTL in effect', msg, parseInt((remaining - Date.now()) / 1000))
         }
         return false
     } else {
         if (debug) {
-            console.log('passed', msg, ttl)
+            console.log('passed', data, ttl)
         }
         ttlCache.set(shortie, true, ttl)
         return true
@@ -23,6 +23,7 @@ function ttlExpired(shortie, ttl, debug, msg) {
 
 function eventsTtlFilter(context, config, eventEmitter, data, callback) {
     let ttl = config.ttl || 60;
+    let drop = config.dropEvents || false;
     let debug = config.debug || false;
     if (data === undefined) {
         return callback(new Error('data is null'), null)
@@ -37,11 +38,23 @@ function eventsTtlFilter(context, config, eventEmitter, data, callback) {
                 }
             })
             let shortie = ShortHash.unique(msg)
-            if (ttlExpired(shortie, ttl, debug, msg)) {
+            let shortmessage = ShortHash.unique(data.message)
+            if (ttlExpired(shortie, ttl, debug, msg, data)) {
                 data.hash = shortie
+                data.shortmsg = shortmessage;
                 return callback(null, data)
             } else {
-                return callback(null, null)
+                if (drop) {
+                    if (debug) {
+                        console.log('Dropping event due to TTL', msg)
+                    }
+                    return callback(null, null)
+                } else {
+                    data.hash = shortie
+                    data.shortmsg = shortmessage;
+                    data.ttlactive = true;
+                    return callback(null, data)
+                }
             }
         } else {
             return callback(null, data)
