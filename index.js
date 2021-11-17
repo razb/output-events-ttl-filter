@@ -33,8 +33,9 @@ function eventsTtlFilter(context, config, eventEmitter, data, callback) {
         if (data && data.message) {
             let msg = ''
             keys.map(key => {
-                if (data[key]) {
-                    msg = msg + (msg == '' ? '' : ':') + data[key];
+                key = 'data.' + key.replace(/\./g,'?.')
+                if (eval(key)) {
+                    msg = msg + (msg == '' ? '' : ':') + eval(key);
                 }
             })
             let shortie = ShortHash.unique(msg)
